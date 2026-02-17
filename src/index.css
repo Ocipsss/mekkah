@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-slate-900 antialiased;
+  }
+}
+
+/* Custom style untuk menghilangkan spin button di input number */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Tambahkan di index.css */
+@layer base {
+  input, select, textarea {
+    font-size: 16px !important; /* Mencegah auto-zoom di iOS */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
