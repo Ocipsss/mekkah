@@ -1,26 +1,45 @@
 import { db } from './schema';
 
 export const transactionRepo = {
-  // Simpan transaksi baru ke lokal
-  async save(transactionData) {
-    return await db.transactions.add({
-      ...transactionData,
-      syncStatus: 'pending',
-      timestamp: Date.now()
+  // UPGRADE: Simpan transaksi lengkap (Header + Items)
+  async save(cart, headerData) {
+    return await db.transaction('rw', [db.transactions, db.transactionItems], async () => {
+      // 1. Simpan Header Transaksi
+      const transactionId = await db.transactions.add({
+        total: headerData.total,
+        payMethod: headerData.payMethod,
+        userId: headerData.userId || 'guest',
+        syncStatus: 'pending',
+        timestamp: Date.now()
+      });
+
+      // 2. Simpan Semua Item Barang yang ada di keranjang
+      const itemsToSave = cart.map(item => ({
+        transactionId: transactionId, // Hubungkan ke ID header di atas
+        category: item.category,
+        productName: item.name,
+        price: item.price,
+        qty: item.qty,
+        unit: item.unit
+      }));
+
+      await db.transactionItems.bulkAdd(itemsToSave);
+      
+      return transactionId;
     });
   },
 
-  // Ambil semua transaksi yang belum tersinkron (untuk SyncEngine)
+  // Fungsi getPending tetap ada (untuk SyncEngine)
   async getPending() {
     return await db.transactions.where('syncStatus').equals('pending').toArray();
   },
 
-  // Update status setelah sukses kirim ke Firebase
+  // Fungsi markAsSynced tetap ada
   async markAsSynced(id) {
     return await db.transactions.update(id, { syncStatus: 'synced' });
   },
 
-  // Ambil history hari ini
+  // Fungsi getToday tetap ada
   async getToday() {
     const startOfDay = new Date().setHours(0, 0, 0, 0);
     return await db.transactions
@@ -30,7 +49,7 @@ export const transactionRepo = {
       .toArray();
   },
 
-  // Fungsi untuk Data Pruning (Hapus yang sudah sync & > 30 hari)
+  // Fungsi Pruning tetap ada
   async pruneOldData() {
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
     return await db.transactions

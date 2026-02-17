@@ -2,10 +2,13 @@ import Dexie from 'dexie';
 
 export const db = new Dexie('MekkahDB');
 
-// ++id: auto-increment
-// Indexing dilakukan agar pencarian data (History) tetap cepat
 db.version(1).stores({
-  transactions: '++id, timestamp, category, productName, syncStatus, userId',
+  // transactions: Header transaksi (Total, Bayar, Waktu)
+  transactions: '++id, timestamp, total, payMethod, syncStatus, userId',
+  
+  // transactionItems: Detail barang-barang yang dibeli
+  transactionItems: '++id, transactionId, category, productName, price, qty, unit',
+  
   users: 'uid, name, role'
 });
 
