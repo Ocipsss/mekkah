@@ -1,0 +1,159 @@
+Sesi 1: (db/ dan api/)
+
+- src/api/firebase.js: masih kosong
+
+
+- src/api/firebaseConfig.js: masih kosong
+
+
+- src/api/transaction.js: masih kosong
+
+
+- src/db/repository.js:
+import { db } from './schema';
+import { headerRepo } from './repos/transactionHeader.repo';
+import { itemRepo } from './repos/transactionItems.repo';
+
+export const transactionRepo = {
+  // --- CREATE ---
+  async save(cart, headerData) {
+    return await db.transaction('rw', [db.transactions, db.transactionItems], async () => {
+      const transactionId = await headerRepo.add(headerData);
+      await itemRepo.addBulk(transactionId, cart);
+      return transactionId;
+    });
+  },
+
+  // --- UPDATE ---
+  async update(id, cart, headerData) {
+    return await db.transaction('rw', [db.transactions, db.transactionItems], async () => {
+      await headerRepo.update(id, headerData);
+      await itemRepo.deleteByTransactionId(id);
+      await itemRepo.addBulk(id, cart);
+    });
+  },
+
+  // --- DELETE ---
+  async delete(id) {
+    return await db.transaction('rw', [db.transactions, db.transactionItems], async () => {
+      await itemRepo.deleteByTransactionId(id);
+      await headerRepo.delete(id);
+    });
+  },
+
+  // --- READ ---
+  async getToday() {
+    const headers = await headerRepo.getTodayHeaders();
+    
+    return await Promise.all(headers.map(async (h) => {
+      const items = await itemRepo.getByTransactionId(h.id);
+      return { ...h, items };
+    }));
+  },
+
+  // --- SYNC HELPERS (Langsung ke DB atau Header Repo) ---
+  async getPending() {
+    return await db.transactions.where('syncStatus').equals('pending').toArray();
+  },
+
+  async markAsSynced(id) {
+    return await db.transactions.update(id, { syncStatus: 'synced' });
+  }
+};
+
+
+- src/db/schema.js:
+import Dexie from 'dexie';
+
+export const db = new Dexie('MekkahDB');
+
+db.version(1).stores({
+  // transactions: Header transaksi (Total, Bayar, Waktu)
+  transactions: '++id, timestamp, total, payMethod, syncStatus, userId',
+  
+  // transactionItems: Detail barang-barang yang dibeli
+  transactionItems: '++id, transactionId, category, productName, price, qty, unit',
+  
+  users: 'uid, name, role'
+});
+
+export default db;
+
+
+- src/db/syncEngine.js: masih kosong
+
+
+- src/db/repos/transactionHeader.repo.js:
+import { db } from '../schema';
+
+export const headerRepo = {
+  // Ambil data header mentah berdasarkan ID
+  async getById(id) {
+    return await db.transactions.get(id);
+  },
+
+  // Tambah header baru
+  async add(headerData) {
+    return await db.transactions.add({
+      total: headerData.total,
+      payMethod: headerData.payMethod,
+      userId: headerData.userId || 'guest',
+      syncStatus: 'pending',
+      timestamp: Date.now()
+    });
+  },
+
+  // Update data header
+  async update(id, headerData) {
+    return await db.transactions.update(id, {
+      total: headerData.total,
+      payMethod: headerData.payMethod,
+      syncStatus: 'pending', // Reset ke pending agar SyncEngine tahu ada perubahan
+      updatedAt: Date.now()
+    });
+  },
+
+  // Hapus header
+  async delete(id) {
+    return await db.transactions.delete(id);
+  },
+
+  // Ambil semua header untuk hari ini
+  async getTodayHeaders() {
+    const startOfDay = new Date().setHours(0, 0, 0, 0);
+    return await db.transactions
+      .where('timestamp')
+      .above(startOfDay)
+      .reverse()
+      .toArray();
+  }
+};
+
+
+- src/db/repos/transactionItems.repo.js:
+import { db } from '../schema';
+
+export const itemRepo = {
+  async addBulk(transactionId, cart) {
+    const itemsToSave = cart.map(item => ({
+      transactionId,
+      category: item.category,
+      productName: item.name || item.productName,
+      price: item.price,
+      qty: item.qty,
+      unit: item.unit
+    }));
+    return await db.transactionItems.bulkAdd(itemsToSave);
+  },
+
+  async deleteByTransactionId(transactionId) {
+    return await db.transactionItems.where('transactionId').equals(transactionId).delete();
+  },
+
+  async getByTransactionId(transactionId) {
+    const items = await db.transactionItems.where('transactionId').equals(transactionId).toArray();
+    // Kita map kembali ke properti 'name' agar cocok dengan state keranjang di UI
+    return items.map(i => ({ ...i, name: i.productName }));
+  }
+};
+

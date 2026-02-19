@@ -1,0 +1,983 @@
+- src/components/layout/Navbar.jsx:import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Menu, X, History, LogOut, LayoutDashboard } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    setIsOpen(false);
+  };
+
+  return (
+    <>
+      <nav className="bg-white p-4 border-b flex justify-between items-center sticky top-0 z-40 shadow-sm">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setIsOpen(true)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+            <Menu size={24} className="text-emerald-700" />
+          </button>
+          <h1 className="text-xl font-black text-emerald-700 tracking-tight italic">MEKKAH</h1>
+        </div>
+      </nav>
+
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop dengan transisi opacity linear */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "linear" }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm"
+            />
+
+            {/* Sidenav dengan transisi Ease Out (Tanpa Mantul) */}
+            <motion.div 
+              initial={{ x: '-100%' }} 
+              animate={{ x: 0 }} 
+              exit={{ x: '-100%' }}
+              transition={{ 
+                type: "tween", // Mengganti spring menjadi tween
+                ease: "easeOut", 
+                duration: 0.3 
+              }}
+              className="fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl p-6 flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-10">
+                <h2 className="text-2xl font-black text-emerald-700">Menu</h2>
+                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <button
+                  onClick={() => handleNavigation('/')}
+                  className={`w-full flex items-center gap-3 p-4 rounded-2xl font-bold transition-all ${
+                    location.pathname === '/' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-500 hover:bg-emerald-50'
+                  }`}
+                >
+                  <LayoutDashboard size={20} /> Transaksi (POS)
+                </button>
+                <button
+                  onClick={() => handleNavigation('/history')}
+                  className={`w-full flex items-center gap-3 p-4 rounded-2xl font-bold transition-all ${
+                    location.pathname === '/history' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-500 hover:bg-emerald-50'
+                  }`}
+                >
+                  <History size={20} /> Riwayat
+                </button>
+              </div>
+
+              <div className="pt-6 border-t border-gray-100">
+                <button className="w-full flex items-center gap-3 p-4 text-red-500 font-bold hover:bg-red-50 rounded-2xl">
+                  <LogOut size={20} /> Keluar
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
+export default Navbar;
+
+
+
+- src/components/layout/SyncStatus.jsx: (masih kosong)
+
+
+
+- src/components/transactions/CartItem.jsx:
+import React from 'react';
+import { Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { formatRupiah } from '@/utils/currency';
+
+const CartItem = ({ item, onRemove }) => {
+  return (
+    <motion.div 
+      layout 
+      initial={{ opacity: 0, scale: 0.9 }} 
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="bg-white p-4 rounded-3xl flex justify-between items-center shadow-sm border border-gray-100"
+    >
+      <div className="flex-1">
+        <h4 className="font-bold text-xs text-slate-800 uppercase leading-none">{item.name}</h4>
+        <p className="text-[9px] text-slate-400 mt-1">
+          {item.qty} {item.unit} x {formatRupiah(item.price)}
+        </p>
+      </div>
+      <div className="flex items-center gap-4">
+        <span className="font-bold text-sm text-slate-700">
+          {formatRupiah(item.price * item.qty)}
+        </span>
+        <button 
+          onClick={() => onRemove(item.id)} 
+          className="text-red-200 hover:text-red-500 p-1 transition-colors"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+export default CartItem;
+
+
+
+
+- src/components/transactions/HistoryCard.jsx:
+import React from 'react';
+import { CheckCircle2, Clock, Edit3, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { formatRupiah } from '@/utils/currency';
+
+const HistoryCard = ({ trx, onEdit, onDelete }) => {
+  return (
+    <motion.div 
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 space-y-4"
+    >
+      {/* Detail Bagian Atas */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-4">
+          <div className={`p-2.5 rounded-2xl ${trx.syncStatus === 'synced' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'}`}>
+            {trx.syncStatus === 'synced' ? <CheckCircle2 size={18} /> : <Clock size={18} />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="font-bold text-sm text-slate-800">
+                {new Date(trx.timestamp || trx.id).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </h4>
+              <span className="text-[8px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 font-bold uppercase tracking-tighter">
+                {trx.payMethod}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium mt-0.5">ID: #{trx.id.toString().slice(-4)}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-black text-sm text-slate-800">{formatRupiah(trx.total)}</p>
+          <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Berhasil</p>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2 pt-3 border-t border-gray-50">
+        <button 
+          onClick={() => onEdit(trx)}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-bold uppercase hover:bg-emerald-50 hover:text-emerald-600 transition-all active:scale-95"
+        >
+          <Edit3 size={14} /> Edit Transaksi
+        </button>
+        <button 
+          onClick={() => onDelete(trx.id)}
+          className="px-4 py-2.5 bg-slate-50 text-red-400 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all active:scale-95"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+export default HistoryCard;
+
+
+
+
+- src/components/transactions/TransactionCard.jsx: (masih kosong)
+
+
+
+- src/components/ui/Button.jsx:
+export const Button = ({ children, onClick, variant = 'primary', className = '', ...props }) => {
+  const variants = {
+    primary: 'bg-emerald-600 text-white active:bg-emerald-700',
+    secondary: 'bg-slate-800 text-white active:bg-slate-900',
+    outline: 'border-2 border-emerald-600 text-emerald-600 active:bg-emerald-50',
+    ghost: 'bg-gray-100 text-gray-600 active:bg-gray-200'
+  };
+
+  return (
+    <button 
+      onClick={onClick}
+      className={`w-full py-4 rounded-2xl font-bold transition-all transform active:scale-95 flex items-center justify-center gap-2 ${variants[variant]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+
+
+
+- src/components/ui/CategoryFab.jsx:
+import React, { useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Package, Layers } from 'lucide-react';
+import { CATEGORIES } from '@/constants/appConfig';
+
+const CategoryFab = ({ isOpen, setIsOpen, selectedCat, onSelect }) => {
+  const catKeys = Object.keys(CATEGORIES);
+  const constraintsRef = useRef(null);
+  const fabRef = useRef(null); // Ref untuk ambil posisi asli tombol
+  
+  const [isAtLeft, setIsAtLeft] = useState(false);
+
+  // Fungsi yang dijalankan saat jari lepas dari tombol
+  const handleDragEnd = () => {
+    if (fabRef.current) {
+      const rect = fabRef.current.getBoundingClientRect();
+      const screenWidth = window.innerWidth;
+      
+      // Cek apakah posisi tombol lebih dekat ke kiri layar
+      // Jika posisi X tombol < setengah lebar layar, berarti dia di kiri
+      if (rect.left < screenWidth / 2) {
+        setIsAtLeft(true);
+      } else {
+        setIsAtLeft(false);
+      }
+    }
+  };
+
+  // Sudut yang adaptif
+  // Kanan: Mekar ke kiri atas (160 s/d 240)
+  // Kiri: Mekar ke kanan atas (20 s/d -60)
+  const START_ANGLE = isAtLeft ? 20 : 160;
+  const END_ANGLE = isAtLeft ? -60 : 240;
+
+  return (
+    <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-50">
+      <motion.div
+        ref={fabRef}
+        drag
+        dragConstraints={constraintsRef}
+        dragMomentum={false}
+        onDragEnd={handleDragEnd} // Update posisi pas berhenti ditarik
+        className="absolute bottom-28 right-8 pointer-events-auto"
+        style={{ touchAction: 'none' }}
+      >
+        <AnimatePresence>
+          {isOpen && (
+            <div className="relative">
+              {catKeys.map((key, index) => {
+                const angle = START_ANGLE + (index * ((END_ANGLE - START_ANGLE) / (catKeys.length - 1 || 1)));
+                const radian = (angle * Math.PI) / 180;
+                const RADIUS = 95;
+                const x = Math.cos(radian) * RADIUS;
+                const y = Math.sin(radian) * RADIUS;
+
+                return (
+                  <motion.button
+                    key={key}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, x: x, y: y, scale: 1 }}
+                    exit={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+                    onClick={() => {
+                      onSelect(CATEGORIES[key]);
+                      setIsOpen(false);
+                    }}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 px-4 py-2 rounded-full shadow-xl border-2 transition-colors whitespace-nowrap ${
+                      selectedCat === CATEGORIES[key] 
+                        ? 'bg-emerald-600 text-white border-white' 
+                        : 'bg-white/95 text-emerald-700 border-emerald-50'
+                    }`}
+                    style={{ left: '50%', top: '50%' }}
+                  >
+                    <Package size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-wider">{CATEGORIES[key]}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+        </AnimatePresence>
+
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-16 h-16 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${
+            isOpen ? 'bg-slate-800 text-white rotate-45 rounded-full' : 'bg-emerald-600 text-white shadow-lg shadow-emerald-200/50'
+          }`}
+        >
+          {isOpen ? <Plus size={32} /> : <Layers size={28} />}
+        </motion.button>
+      </motion.div>
+    </div>
+  );
+};
+
+export default CategoryFab;
+
+
+
+
+- src/components/ui/Input.jsx: (masih kosong)
+
+
+batasFolder
+
+- src/pages/EditTransaction.jsx:
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { transactionRepo } from '@/db/repository';
+import { formatRupiah, parseRawAmount } from '@/utils/currency';
+import { UNIT_OPTIONS, PAYMENT_METHODS } from '@/constants/appConfig';
+import { Button } from '@/components/ui/Button';
+import Navbar from '@/components/layout/Navbar';
+import CartItem from '@/components/transactions/CartItem';
+import { toast } from 'sonner';
+import { Save, Check, X, ShoppingBag, ArrowLeft } from 'lucide-react';
+
+const EditTransaction = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  const [cart, setCart] = useState([]);
+  const [payMethod, setPayMethod] = useState('Cash');
+  const [transactionId, setTransactionId] = useState(null);
+
+  const [editingItem, setEditingItem] = useState(null);
+  const [productName, setProductName] = useState('');
+  const [price, setPrice] = useState(0);
+  const [displayPrice, setDisplayPrice] = useState('');
+  const [qty, setQty] = useState(1);
+  const [unit, setUnit] = useState('');
+  const [category, setCategory] = useState('');
+
+  useEffect(() => {
+    const data = location.state?.editData;
+    if (!data) {
+      navigate('/history');
+      return;
+    }
+    setTransactionId(data.id);
+    setCart(data.items);
+    setPayMethod(data.payMethod);
+  }, [location, navigate]);
+
+  const grandTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+  const handleSelectToEdit = (item) => {
+    setEditingItem(item);
+    setProductName(item.name);
+    setPrice(item.price);
+    setDisplayPrice(formatRupiah(item.price, false));
+    setQty(item.qty);
+    setUnit(item.unit);
+    setCategory(item.category);
+  };
+
+  const handleUpdateItem = () => {
+    setCart(prev => prev.map(item => 
+      item.id === editingItem.id 
+        ? { ...item, name: productName, price, qty, unit } 
+        : item
+    ));
+    cancelItemEdit();
+    toast.success("Barang diperbarui");
+  };
+
+  const cancelItemEdit = () => {
+    setEditingItem(null);
+    setProductName('');
+    setPrice(0);
+    setDisplayPrice('');
+    setQty(1);
+  };
+
+  const handleSaveTransaction = async () => {
+    try {
+      await transactionRepo.update(transactionId, cart, {
+        total: grandTotal,
+        payMethod: payMethod,
+        userId: 'Abdullah'
+      });
+      toast.success("Transaksi Berhasil Diupdate!");
+      navigate('/history');
+    } catch (err) {
+      toast.error("Gagal update transaksi");
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-80 font-sans relative">
+      <Navbar />
+      
+      <div className="p-4 space-y-4">
+        <button onClick={() => navigate('/history')} className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors">
+          <ArrowLeft size={14} /> Kembali ke Riwayat
+        </button>
+
+        <h1 className="text-xl font-black text-slate-800 tracking-tight">
+          Edit Transaksi <span className="text-emerald-600">#{transactionId?.toString().slice(-4)}</span>
+        </h1>
+
+        {/* --- FORM EDIT BARANG --- */}
+        <div className={`bg-white p-6 rounded-[2.5rem] shadow-sm border-2 transition-all duration-300 ${editingItem ? 'border-amber-400 ring-8 ring-amber-50' : 'border-dashed border-gray-200 opacity-60'}`}>
+          {!editingItem ? (
+            <div className="text-center py-4">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pilih barang di keranjang untuk diedit</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg uppercase tracking-wider">Editing: {category}</span>
+                <button onClick={cancelItemEdit} className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400"><X size={18} /></button>
+              </div>
+
+              <input 
+                type="text" value={productName} onChange={(e) => setProductName(e.target.value)}
+                className="w-full text-lg font-bold border-b border-gray-100 outline-none focus:border-amber-500 pb-1 transition-colors"
+                placeholder="Nama Produk"
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">Jumlah</label>
+                  <input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))}
+                    className="w-full text-xl font-bold border-b border-gray-100 outline-none focus:border-amber-500 transition-colors" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">Satuan</label>
+                  <select value={unit} onChange={(e) => setUnit(e.target.value)} className="w-full text-lg font-bold border-b border-gray-100 outline-none bg-transparent focus:border-amber-500 transition-colors">
+                    {UNIT_OPTIONS[category]?.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">Harga Satuan</label>
+                <div className="flex items-baseline gap-1 border-b border-gray-100 focus-within:border-amber-500 transition-colors">
+                  <span className="font-bold text-amber-600">Rp</span>
+                  <input type="text" value={displayPrice} 
+                    onChange={(e) => {
+                      const raw = parseRawAmount(e.target.value);
+                      setPrice(raw);
+                      setDisplayPrice(formatRupiah(raw, false));
+                    }}
+                    className="w-full text-3xl font-black text-slate-800 outline-none" />
+                </div>
+              </div>
+
+              <Button onClick={handleUpdateItem} className="w-full bg-amber-500 hover:bg-amber-600 text-white h-14 rounded-2xl shadow-lg shadow-amber-100 font-bold transition-transform active:scale-95">
+                <Check size={20} className="mr-2" /> SIMPAN PERUBAHAN
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* --- DAFTAR ITEM --- */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1 text-slate-400 uppercase tracking-[0.2em] font-black text-[9px]">
+            <ShoppingBag size={12} /> <span>Daftar Keranjang</span>
+          </div>
+          {cart.map((item) => (
+            <div key={item.id} onClick={() => handleSelectToEdit(item)} 
+              className={`cursor-pointer transition-all duration-200 ${editingItem?.id === item.id ? 'scale-95 opacity-50 ring-2 ring-amber-400 rounded-2xl' : 'active:scale-98'}`}>
+              <CartItem item={item} onRemove={(e) => {
+                e.stopPropagation();
+                setCart(cart.filter(i => i.id !== item.id));
+              }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* --- BOTTOM BAR (IDENTIK DENGAN TRANSACTION.JSX) --- */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-xl p-5 border-t border-gray-100 shadow-[0_-15px_50px_rgba(0,0,0,0.1)] rounded-t-[2.5rem] z-30">
+        
+        {/* Row 1: Metode Pembayaran */}
+        <div className="mb-4 overflow-x-auto scrollbar-hide flex gap-2">
+          {PAYMENT_METHODS.map((m) => (
+            <button 
+              key={m} 
+              onClick={() => setPayMethod(m)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                payMethod === m ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+
+        {/* Row 2: Harga & Badge Item */}
+        <div className="flex justify-between items-end mb-4 px-2">
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Baru</p>
+            <p className="text-3xl font-black text-slate-900 tracking-tight">{formatRupiah(grandTotal)}</p>
+          </div>
+          <div className="bg-amber-50 border border-amber-100 px-3 py-1 rounded-xl">
+            <p className="text-[10px] font-extrabold text-amber-700 uppercase">{cart.length} Item</p>
+          </div>
+        </div>
+
+        {/* Row 3: Tombol Aksi Utama (Full Width) */}
+        <Button 
+          disabled={cart.length === 0}
+          onClick={handleSaveTransaction}
+          className={`h-16 w-full rounded-2xl shadow-xl transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 ${
+            cart.length === 0 
+              ? 'bg-slate-200 text-slate-400' 
+              : 'bg-amber-500 text-white shadow-amber-100'
+          }`} 
+        >
+          <Save size={22} />
+          <span className="font-black tracking-widest uppercase">Update Transaksi</span>
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default EditTransaction;
+
+
+
+
+- src/pages/History.jsx:
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { transactionRepo } from '@/db/repository';
+import { formatRupiah } from '@/utils/currency';
+import Navbar from '@/components/layout/Navbar';
+import HistoryCard from '@/components/transactions/HistoryCard'; // Import komponen baru
+import { toast } from 'sonner';
+import { History as HistoryIcon, Calendar, ReceiptText } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+
+const History = () => {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const dailyTotal = transactions.reduce((acc, curr) => acc + curr.total, 0);
+
+  useEffect(() => { loadHistory(); }, []);
+
+  const loadHistory = async () => {
+    try {
+      const data = await transactionRepo.getToday();
+      setTransactions(data.sort((a, b) => b.id - a.id));
+    } catch (error) { console.error(error); } 
+    finally { setLoading(false); }
+  };
+
+  const handleEdit = (trx) => navigate('/edit-transaction', { state: { editData: trx } });
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Hapus transaksi ini?")) {
+      await transactionRepo.delete(id);
+      toast.success("Transaksi dihapus");
+      loadHistory();
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-20 font-sans">
+      <Navbar />
+      <div className="p-4 pt-6">
+        {/* Omzet Card tetap di sini karena ini bagian dari header halaman */}
+        <div className="bg-emerald-700 rounded-[2.5rem] p-6 text-white shadow-xl mb-8 relative overflow-hidden">
+           {/* ... isi omzet card sama seperti sebelumnya ... */}
+           <h2 className="text-3xl font-black tracking-tight">{formatRupiah(dailyTotal)}</h2>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-1 mb-2">
+            <HistoryIcon size={14} className="text-slate-400" />
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Aktivitas Terkini</span>
+          </div>
+
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <p className="text-center py-10 text-slate-400 text-xs italic">Memuat...</p>
+            ) : transactions.length === 0 ? (
+              <div className="bg-white rounded-3xl p-10 text-center border border-dashed">
+                <ReceiptText size={40} className="mx-auto text-gray-200 mb-3" />
+                <p className="text-gray-400 text-sm font-medium">Belum ada transaksi</p>
+              </div>
+            ) : (
+              transactions.map((trx) => (
+                <HistoryCard 
+                  key={trx.id} 
+                  trx={trx} 
+                  onEdit={handleEdit} 
+                  onDelete={handleDelete} 
+                />
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default History;
+
+
+
+
+- src/pages/Login.jsx: (masih kosong)
+
+
+
+
+- src/pages/Transaction.jsx:
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { UNIT_OPTIONS, PAYMENT_METHODS } from '@/constants/appConfig';
+import { formatRupiah } from '@/utils/currency';
+import { Button } from '@/components/ui/Button';
+import Navbar from '@/components/layout/Navbar';
+import CategoryFab from '@/components/ui/CategoryFab';
+import CartItem from '@/components/transactions/CartItem';
+import { useTransactionForm } from '@/features/pos/useTransactionForm';
+import { transactionRepo } from '@/db/repository';
+import { toast } from 'sonner';
+import { Package, Save, Calculator, Plus, ShoppingBag, X, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const Transaction = () => {
+  const { state, actions } = useTransactionForm();
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.state?.editData) {
+      actions.loadEditData(location.state.editData);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, actions]);
+
+  const handleFinalSave = async () => {
+    if (state.cart.length === 0) return;
+    
+    const payload = {
+      total: state.grandTotal,
+      payMethod: state.payMethod,
+      userId: 'Abdullah',
+      updatedAt: Date.now()
+    };
+
+    try {
+      if (state.editingId) {
+        await transactionRepo.update(state.editingId, state.cart, payload);
+        toast.success("Transaksi Berhasil Diperbarui!");
+        navigate('/history');
+      } else {
+        await transactionRepo.save(state.cart, payload);
+        toast.success("Transaksi Berhasil Disimpan!");
+      }
+      actions.resetForm();
+    } catch (err) {
+      console.error(err);
+      toast.error(state.editingId ? "Gagal memperbarui" : "Gagal menyimpan");
+    }
+  };
+
+  return (
+    <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-72 font-sans relative overflow-x-hidden">
+      <Navbar />
+
+      <AnimatePresence>
+        {isFabOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setIsFabOpen(false)}
+            className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-40"
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="p-4 space-y-6">
+        
+        {/* BANNER MODE EDIT TRANSAKSI */}
+        {state.editingId && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
+            className="bg-amber-500 text-white p-3 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-100"
+          >
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-white/20 rounded-lg"><Save size={14} /></div>
+              <span className="text-[10px] font-black uppercase tracking-wider">Mode Edit Transaksi #{state.editingId.toString().slice(-4)}</span>
+            </div>
+            <button onClick={actions.resetForm} className="p-1 hover:bg-white/20 rounded-full transition-colors"><X size={16} /></button>
+          </motion.div>
+        )}
+
+        <div className="bg-emerald-600/5 border border-emerald-600/10 rounded-2xl p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-[0.2em]">Mode: {state.selectedCat}</span>
+          </div>
+          <span className="text-[10px] font-bold text-slate-400 uppercase">{state.cart.length} Item</span>
+        </div>
+
+        {/* --- SECTION 1: INPUT FORM --- */}
+        <section className={`bg-white p-5 rounded-[2.5rem] shadow-sm border transition-all duration-300 ${state.editingItem ? 'border-blue-400 ring-4 ring-blue-50' : 'border-gray-100'}`}>
+          {state.editingItem && (
+            <div className="flex items-center gap-2 mb-4 text-blue-600">
+              <Plus size={12} className="rotate-45" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Sedang Mengubah Item</span>
+            </div>
+          )}
+          
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1 ml-1">Nama Produk</label>
+            <div className="flex items-center gap-3 border-b border-gray-100 focus-within:border-emerald-500 transition-colors py-1">
+              <Package size={20} className="text-gray-300" />
+              <input type="text" value={state.productName} onFocus={actions.handleSelectAll}
+                onChange={(e) => actions.setProductName(e.target.value)}
+                placeholder="Ketik nama barang..." className="w-full outline-none bg-transparent text-gray-700 font-bold" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1 ml-1">Jumlah</label>
+              <div className="flex items-center gap-3 border-b border-gray-100 py-1">
+                <Calculator size={18} className="text-gray-300" />
+                <input type="number" inputMode="numeric" value={state.qty === 0 ? '' : state.qty}
+                  onFocus={actions.handleSelectAll}
+                  onChange={(e) => actions.setQty(parseInt(e.target.value) || 0)}
+                  className="w-full outline-none bg-transparent font-bold text-gray-700 text-lg" />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1 ml-1">Satuan</label>
+              <div className="relative border-b border-gray-100 py-1">
+                <select value={state.unit} onChange={(e) => actions.setUnit(e.target.value)}
+                  className="w-full outline-none bg-transparent font-bold text-gray-700 appearance-none pr-4 text-lg cursor-pointer">
+                  {UNIT_OPTIONS[state.selectedCat].map((u) => (<option key={u} value={u}>{u}</option>))}
+                </select>
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-300 text-[8px]">▼</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1 ml-1">Harga Satuan</label>
+            <div className="flex items-baseline gap-2 pt-1 border-b border-gray-50">
+              <span className="text-xl font-bold text-emerald-600/50">Rp</span>
+              <input type="text" inputMode="numeric" placeholder="0" value={state.displayPrice}
+                onFocus={actions.handleSelectAll} onChange={actions.handlePriceChange}
+                className="w-full text-4xl font-black text-emerald-600 outline-none tracking-tight" />
+            </div>
+          </div>
+
+          {/* TOMBOL DINAMIS: Update vs Tambah */}
+          {state.editingItem ? (
+            <div className="flex gap-2 pt-2">
+              <Button onClick={actions.updateItemInCart} className="flex-2 py-4 bg-blue-600 text-white rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-blue-100">
+                <Check size={20} /> <span className="font-bold text-sm uppercase">Simpan Perubahan</span>
+              </Button>
+              <Button onClick={actions.resetInputFields} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold uppercase text-[10px]">
+                Batal
+              </Button>
+            </div>
+          ) : (
+            <Button variant="secondary" onClick={actions.addToCart} className="w-full py-4 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
+              <Plus size={20} /> <span className="font-bold text-sm uppercase">Tambah ke Daftar</span>
+            </Button>
+          )}
+        </section>
+
+        {/* --- SECTION 2: DAFTAR BELANJA --- */}
+        {state.cart.length > 0 && (
+          <section className="space-y-3 pb-10">
+            <div className="flex items-center gap-2 px-1 text-slate-400 uppercase tracking-widest font-bold text-[10px]">
+              <ShoppingBag size={14} /> <span>Detail Belanjaan (Klik untuk edit)</span>
+            </div>
+            <div className="space-y-2">
+              <AnimatePresence mode='popLayout'>
+                {state.cart.map((item) => (
+                  <motion.div 
+                    key={item.id} 
+                    layout 
+                    initial={{ opacity: 0, scale: 0.9 }} 
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    onClick={() => actions.startEditItem(item)}
+                    className={`cursor-pointer transition-all duration-300 rounded-3xl ${state.editingItem?.id === item.id ? 'ring-2 ring-blue-500 shadow-md scale-[1.02]' : 'hover:scale-[1.01]'}`}
+                  >
+                    <CartItem item={item} onRemove={(e) => {
+                      e.stopPropagation(); // Biar klik hapus gak memicu edit
+                      actions.removeFromCart(item.id);
+                    }} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </section>
+        )}
+      </div>
+
+      <CategoryFab isOpen={isFabOpen} setIsOpen={setIsFabOpen} selectedCat={state.selectedCat} onSelect={actions.setSelectedCat} />
+
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-xl p-5 border-t border-gray-100 shadow-[0_-15px_50px_rgba(0,0,0,0.1)] rounded-t-[2.5rem] z-30">
+        <div className="mb-4 overflow-x-auto scrollbar-hide flex gap-2">
+          {PAYMENT_METHODS.map((m) => (
+            <button key={m} onClick={() => actions.setPayMethod(m)}
+              className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${state.payMethod === m ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
+              {m}
+            </button>
+          ))}
+        </div>
+        <div className="flex justify-between items-end mb-4 px-2">
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Grand Total</p>
+            <p className="text-3xl font-black text-slate-900 tracking-tight">{formatRupiah(state.grandTotal)}</p>
+          </div>
+          <div className="bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl">
+            <p className="text-[10px] font-extrabold text-emerald-700 uppercase">{state.cart.length} Item</p>
+          </div>
+        </div>
+        <Button disabled={state.cart.length === 0}
+          className={`h-16 rounded-2xl shadow-xl transition-all duration-300 active:scale-95 ${
+            state.cart.length === 0 ? 'bg-slate-200 text-slate-400' : 
+            state.editingId ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white'
+          }`} onClick={handleFinalSave}>
+          <Save size={22} />
+          <span className="font-black tracking-widest uppercase ml-2">{state.editingId ? 'Update Transaksi' : 'Simpan Transaksi'}</span>
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default Transaction;
+
+
+
+
+- src/pages/TransactionDetail.jsx:
+import React from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { formatRupiah } from '@/utils/currency';
+import Navbar from '@/components/layout/Navbar';
+import { ArrowLeft, Printer, Share2, Calendar, Receipt, User } from 'lucide-react';
+
+const TransactionDetail = () => {
+  const { id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const trx = location.state?.trxData;
+
+  if (!trx) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <p>Data tidak ditemukan</p>
+        <button onClick={() => navigate('/history')} className="text-emerald-600 font-bold">Kembali</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-10 font-sans">
+      <Navbar />
+      
+      <div className="p-4 space-y-4">
+        {/* Header Navigasi */}
+        <button onClick={() => navigate('/history')} className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+          <ArrowLeft size={14} /> Kembali ke Riwayat
+        </button>
+
+        {/* Kartu Struk Utama */}
+        <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden border border-gray-100">
+          {/* Bagian Atas: Status */}
+          <div className="bg-slate-900 p-8 text-center text-white">
+            <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
+              <Receipt size={32} />
+            </div>
+            <h1 className="text-2xl font-black tracking-tight">Transaksi Berhasil</h1>
+            <p className="text-slate-400 text-xs mt-1 uppercase tracking-widest font-bold">ID: #{id.toString().slice(-8)}</p>
+          </div>
+
+          {/* Bagian Tengah: Info Transaksi */}
+          <div className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4 border-b border-dashed border-slate-100 pb-6">
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-400">
+                  <Calendar size={12} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Tanggal</span>
+                </div>
+                <p className="text-xs font-bold text-slate-700">{new Date(trx.id).toLocaleString('id-ID')}</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <div className="flex items-center gap-1.5 text-slate-400 justify-end">
+                  <User size={12} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Kasir</span>
+                </div>
+                <p className="text-xs font-bold text-slate-700">{trx.userId || 'Admin'}</p>
+              </div>
+            </div>
+
+            {/* Daftar Barang */}
+            <div className="space-y-4">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Rincian Barang</span>
+              {trx.items.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-start">
+                  <div className="max-w-[70%]">
+                    <p className="text-sm font-bold text-slate-800 leading-tight">{item.name}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{item.qty} {item.unit} x {formatRupiah(item.price)}</p>
+                  </div>
+                  <p className="text-sm font-black text-slate-800">{formatRupiah(item.price * item.qty)}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Total Akhir */}
+            <div className="pt-6 border-t border-slate-100 space-y-3">
+              <div className="flex justify-between items-center text-slate-400 font-bold text-xs uppercase tracking-widest">
+                <span>Metode Pembayaran</span>
+                <span className="text-slate-800">{trx.payMethod}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="text-sm font-black text-slate-800 uppercase tracking-widest">Total Bayar</span>
+                <span className="text-2xl font-black text-emerald-600">{formatRupiah(trx.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Struk */}
+          <div className="bg-slate-50 p-6 text-center border-t border-gray-100">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Terima kasih atas transaksi Anda</p>
+          </div>
+        </div>
+
+        {/* Tombol Aksi */}
+        <div className="grid grid-cols-2 gap-4">
+          <button className="flex items-center justify-center gap-2 bg-white border border-slate-200 h-14 rounded-2xl text-slate-600 font-bold text-sm active:scale-95 transition-all shadow-sm">
+            <Printer size={18} /> Cetak
+          </button>
+          <button className="flex items-center justify-center gap-2 bg-slate-800 h-14 rounded-2xl text-white font-bold text-sm active:scale-95 transition-all shadow-lg">
+            <Share2 size={18} /> Bagikan
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TransactionDetail;
+
+
+

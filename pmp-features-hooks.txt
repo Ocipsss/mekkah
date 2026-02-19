@@ -1,0 +1,154 @@
+Sesi 2: (features/ dan hooks/)
+
+
+- src/features/pos/useCalculator.js: (masih kosong)
+
+
+- src/features/pos/useTransactionForm.js:
+import { useState, useEffect } from 'react';
+import { CATEGORIES, UNIT_OPTIONS } from '@/constants/appConfig';
+import { formatRupiah, parseRawAmount } from '@/utils/currency';
+import { toast } from 'sonner';
+
+export const useTransactionForm = () => {
+  const [selectedCat, setSelectedCat] = useState(CATEGORIES.KITAB);
+  const [unit, setUnit] = useState(UNIT_OPTIONS[CATEGORIES.KITAB][0]);
+  const [productName, setProductName] = useState('');
+  const [price, setPrice] = useState(0);
+  const [displayPrice, setDisplayPrice] = useState('');
+  const [qty, setQty] = useState(1);
+  const [payMethod, setPayMethod] = useState('Cash');
+  const [cart, setCart] = useState([]);
+  const [editingId, setEditingId] = useState(null); // ID Transaksi dari Riwayat
+  const [editingItem, setEditingItem] = useState(null); // Item spesifik dalam keranjang yang sedang diedit
+
+  const grandTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+
+  // Sync Unit saat kategori berubah
+  useEffect(() => {
+    // Jika sedang edit item, jangan paksa reset unit kecuali kategorinya berubah manual
+    if (!editingItem) {
+      setUnit(UNIT_OPTIONS[selectedCat][0]);
+    }
+  }, [selectedCat]);
+
+  const handleSelectAll = (e) => e.target.select();
+
+  const handlePriceChange = (e) => {
+    const rawValue = parseRawAmount(e.target.value);
+    setPrice(rawValue);
+    setDisplayPrice(rawValue === 0 ? '' : formatRupiah(rawValue, false));
+  };
+
+  const resetInputFields = () => {
+    setProductName('');
+    setPrice(0);
+    setDisplayPrice('');
+    setQty(1);
+    setEditingItem(null);
+  };
+
+  const addToCart = () => {
+    if (!productName || price <= 0) {
+      toast.error("Lengkapi nama barang dan harga!");
+      return;
+    }
+    const newItem = {
+      id: Date.now(),
+      category: selectedCat,
+      name: productName,
+      price: price,
+      qty: qty,
+      unit: unit
+    };
+    setCart([newItem, ...cart]);
+    resetInputFields();
+    toast.success(`${newItem.name} ditambah`);
+  };
+
+  // --- FITUR BARU: EDIT ITEM DI DALAM KERANJANG ---
+  const startEditItem = (item) => {
+    setEditingItem(item);
+    setSelectedCat(item.category);
+    setProductName(item.name);
+    setPrice(item.price);
+    setDisplayPrice(formatRupiah(item.price, false));
+    setQty(item.qty);
+    setUnit(item.unit);
+  };
+
+  const updateItemInCart = () => {
+    if (!productName || price <= 0) {
+      toast.error("Data tidak boleh kosong!");
+      return;
+    }
+    setCart(prev => prev.map(item => 
+      item.id === editingItem.id 
+        ? { ...item, category: selectedCat, name: productName, price, qty, unit } 
+        : item
+    ));
+    resetInputFields();
+    toast.success("Barang diperbarui");
+  };
+
+  const removeFromCart = (id) => {
+    setCart(cart.filter(item => item.id !== id));
+    if (editingItem?.id === id) resetInputFields();
+  };
+
+  // --- LOAD DARI RIWAYAT ---
+  const loadEditData = (transaction) => {
+    setEditingId(transaction.id); 
+    setCart(transaction.items);   
+    setPayMethod(transaction.payMethod);
+    toast.info("Mode Edit: Data dimuat");
+  };
+
+  const resetForm = () => {
+    setCart([]);
+    setPayMethod('Cash');
+    setEditingId(null);
+    resetInputFields();
+  };
+
+  return {
+    state: { 
+      selectedCat, unit, productName, price, displayPrice, 
+      qty, payMethod, cart, grandTotal, editingId, editingItem 
+    },
+    actions: { 
+      setSelectedCat, setUnit, setProductName, setQty, setPayMethod, 
+      handlePriceChange, addToCart, removeFromCart, resetForm, 
+      handleSelectAll, loadEditData, startEditItem, updateItemInCart, resetInputFields
+    }
+  };
+};
+
+
+- src/hooks/useAuth.js: (masih kosong)
+
+
+
+- src/hooks/useOnlineStatus.js:
+import { useState, useEffect } from 'react';
+
+export const useOnlineStatus = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOnline;
+};
+
+silahkan
